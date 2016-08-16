@@ -82,9 +82,7 @@ public class Phoenix_Multicopy_Dataloader
     	
         //--------------------------------------------------------------
     	
-        StopWatch watch = new StopWatch();
-        System.out.println("Timer Started");
-        watch.start();
+
         
         BlockingQueue<ArrayList<HashMap<String,Object>>> blockingQueue = new ArrayBlockingQueue<>(20000);
         DBReadThread reader = new DBReadThread(1, blockingQueue,maxrows, sqltable, offset, 
@@ -94,13 +92,17 @@ public class Phoenix_Multicopy_Dataloader
 
         ExecutorService executor = Executors.newFixedThreadPool(Insertthreads);
         
+        StopWatch watch = new StopWatch();
+        System.out.println("Timer Started");
+        watch.start();
+        
         for (int i = 0; i < (Insertthreads*reusability_factor); i++) 
         {
             InsertThread thread;
             try 
             {
                 thread = new InsertThread(i, queues.get(0), reader.getResultSetMetaData(), reader.getprep_template(), phoenix_ip);
-                System.out.println("Submitting Thread ID - " + (i + 1) + "/" + (Insertthreads*reusability_factor));
+                LOGGER.info("Submitting Thread ID - " + (i + 1) + "/" + (Insertthreads*reusability_factor));
                 executor.submit(thread);
             } 
             
@@ -113,7 +115,7 @@ public class Phoenix_Multicopy_Dataloader
             }
             
         }
-        System.out.println("Executor Service Shutdown Triggered");
+        LOGGER.info("Executor Service Shutdown Triggered");
         executor.shutdown();
         
         while(!executor.isTerminated())
@@ -122,7 +124,7 @@ public class Phoenix_Multicopy_Dataloader
         }
         
         long timeTaken = watch.getTime();
-        System.out.println("Total Insert Time taken = " +  timeTaken);
+        LOGGER.info("Total Insert Time taken = " +  timeTaken);
 
     }
     
@@ -202,7 +204,7 @@ public class Phoenix_Multicopy_Dataloader
                 		+ "LEFT JOIN WP_EventInfoMT AS C ON A.AutoID = C.EventAutoID "
                 		+ "LEFT JOIN EPCertEventMT AS D ON A.AutoID = D.EventAutoID;";
                 sqlServerResultSet = sqlServerStmt.executeQuery(query);
-                System.out.println(query + " - Query Executed");
+                LOGGER.info(query + " - Query Executed");
                 md = sqlServerResultSet.getMetaData();               
             }
             catch (SQLException e)
@@ -262,7 +264,7 @@ public class Phoenix_Multicopy_Dataloader
                     
                     prep_template = queryBuilder.toString();
                     
-                    System.out.println("Fetched Row : " + list.size());
+                    LOGGER.info("Fetched Row : " + list.size());
                     
                     if (list.size() == BATCHSIZE) 
                     {
@@ -345,7 +347,7 @@ public class Phoenix_Multicopy_Dataloader
             {
                 phoenix_connection =  DriverManager.getConnection("jdbc:phoenix:"+ PHOENIX_IP +":2181");
 //				phoenix_connection = DriverManager.getConnection("jdbc:phoenix:thin:url=http://"+ PHOENIX_IP +":8765;serialization=PROTOBUF");  
-                System.out.println("THREAD - " + (thread_id + 1) + " Connection Established : PHOENIX");
+                LOGGER.info("THREAD - " + (thread_id + 1) + " Connection Established : PHOENIX");
             }         
             catch (SQLException e) 
             {
@@ -372,7 +374,7 @@ public class Phoenix_Multicopy_Dataloader
             
             try 
             {
-            	System.out.println("THREAD - " + (thread_id + 1) + " Taking Chunk");
+            	LOGGER.info("THREAD - " + (thread_id + 1) + " Taking Chunk");
                 chunk = WriteblockingQueue.take();
             } 
             catch (InterruptedException e) 
@@ -381,7 +383,7 @@ public class Phoenix_Multicopy_Dataloader
                 e.printStackTrace();
             }
             
-            System.out.println("THREAD - " + (thread_id + 1) + " Inserting Chunk");         
+            LOGGER.info("THREAD - " + (thread_id + 1) + " Inserting Chunk");         
             insert(chunk);
             
             try 
